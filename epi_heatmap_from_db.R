@@ -13,11 +13,14 @@ parser$add_argument("-r", "--ref_genome", type="character", default="hg18",
     help="reference genome used for all samples(only hg18 supported at present)")
 parser$add_argument("-s", "--sites_group", type="character", default="intsites_miseq", 
     help="which group to use for connection")
+parser$add_argument("-a", "--annotation_path", type="character", default="/media/THING1/dryga/Epigenetic/hg18", 
+    help="epigenetic annotation path with RData files, e.g. H2BK120ac, H3K4ac, NRSF")
 
 args <- parser$parse_args()
 
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
+annotation <- args$annotation_path
 
 csvfile <- args$sample_gtsp
 if( ! file.exists(csvfile) ) stop(csvfile, "not found")
@@ -30,5 +33,5 @@ connection <- dbConnect(MySQL(), group=args$sites_group)
 info <- dbGetInfo(connection)
 connection <- src_sql("mysql", connection, info = info)
 
-make_epi_heatmap(sampleName_GTSP, referenceGenome, heat_map_result_dir, connection)
+make_epi_heatmap(sampleName_GTSP, referenceGenome, heat_map_result_dir, connection, annotation)
 
