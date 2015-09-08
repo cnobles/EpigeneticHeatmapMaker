@@ -5,6 +5,9 @@ library(DBI, quietly=TRUE)
 library(RMySQL, quietly=TRUE)
 library(dplyr)
 
+library(BSgenome)
+library(intSiteRetriever)
+
 parser <- ArgumentParser(description="Make epigenetic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
 parser$add_argument("-o", "--output_dir", type="character", default="heatmap_output",
