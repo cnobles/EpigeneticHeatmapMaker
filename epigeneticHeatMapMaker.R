@@ -7,6 +7,7 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
         sampleName_GTSP$label <- sampleName_GTSP$GTSP
     }
     sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
+    sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
     setName <- sampleName_GTSP$sampleName
     Alias <- sampleName_GTSP$label
 
@@ -28,48 +29,30 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
         stop("Required annotation directory doesn't exist: ", annotPath)
     }
 
-
-    stop("make_epi_heatmap")
-    setsConAlias <- data.frame(setName, Alias, stringsAsFactors=FALSE)
-    print(setsConAlias)
-
-    #### load up the integration sites ####
-    sites <- getSitesFromDB(dbConn, setName=setsConAlias$setName, freeze, mrcs=TRUE)
-    sites <- merge(sites, setsConAlias, all.x = TRUE)
-    stopifnot(!any(is.na(sites$Alias)))
-
-    ## Dereplicate sites within same alias
-    dereplication <- FALSE
-    if(dereplication) {
-        sites.ins <- droplevels(subset(sites, type=='insertion'))
-        sites.mrc <- droplevels(subset(sites, type=='match'))
-        rows <- duplicated(with(sites.ins, paste0(Alias,Chr,Ort,Position)))
-        sites.ins <- sites.ins[!rows,]
-        sites <- rbind(sites.ins, 
-                       subset(sites.mrc, Sequence %in% sites.ins$Sequence))
-        sites <- droplevels(sites)
-        rm("sites.ins","sites.mrc","rows")
+    add_label <- function(sites, sampleName_GTSP) {
+        sites_GTSP <- merge(sites, sampleName_GTSP)
+        sites_GTSP$sampleName <- sites_GTSP$label
+        sites_GTSP$refGenome <- NULL # not needed downstream
+        sites_GTSP$GTSP <- NULL # not needed downstream
+        sites_GTSP$label <- NULL
+        sites_GTSP
     }
 
-    if(nrow(sites)==0) { stop("No results found for given datasets.") }
+    sites <- getUniqueSites(sampleName_GTSP, connection)
+    sites$type <- "insertion"
+    sites <- add_label(sites, sampleName_GTSP)
+    
+    mrcs <- getMRCs(sampleName_GTSP, connection)
+    mrcs$type <- "match"
+    mrcs <- add_label(mrcs, sampleName_GTSP)
 
-    ## Limit the number of MRCs to the given limit if defined
-    limitMRCs <- FALSE
-    if(limitMRCs) {
-        mrcPerSitesLimit <- 3
-        sites.mrc <- droplevels(subset(sites, type=='match'))    
-        rows <- ave(rep(TRUE, nrow(sites.mrc)), sites.mrc$Sequence, 
-                    FUN=function(x) cumsum(x) <= mrcPerSitesLimit)
-        sites.mrc <- sites.mrc[rows,]
-        sites <- rbind(droplevels(subset(sites, type=='insertion')), sites.mrc)
-        rm("sites.mrc","rows")
-    }
+    sites_mrcs <- rbind(sites, mrcs)
 
-    sites <- makeGRanges(sites, soloStart=TRUE, chromCol="Chr", strandCol="Ort",
-                         freeze=freeze)
+    sites <- makeGRanges(sites_mrcs, soloStart=TRUE, 
+        chromCol="chr", strandCol="strand", startCol='position', freeze=freeze)
 
-    species <- switch(freeze, hg18="Homo sapiens", mm8="Mus musculus")
-    sites <- keepStandardChromosomes(sites, style="UCSC", species=species)
+    #species <- switch(freeze, hg18="Homo sapiens", mm8="Mus musculus")
+    #sites <- keepStandardChromosomes(sites, style="UCSC", species=species)
 
     #### Set the order of histone modifications to be displayed on the heatmap ####
     display.order <- c("H3K9me2", "H3K9me2-HeLa", "H3K9me3", "H3K9me3-MEF", 
@@ -109,10 +92,14 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
     ## get counts of all sites in samples ##
     todocombos <- expand.grid(setName=unique(sites$setName), histones=histoneorder, 
                               windows=windows, stringsAsFactors=FALSE)
+    message("before adding histone window")
     todocombos$histone_window <- with(todocombos, 
                                       paste(histones, getWindowLabel(windows),sep="."))
+    stop("make_epi_heatmap")
     counts <- count(as.data.frame(sites)[,c("setName","BID")], "setName")
     todocombos <- merge(todocombos, counts)
+
+    stop("make_epi_heatmap")
 
     sql <- sprintf("SELECT name, size, histone FROM psl_histones WHERE freeze='%s' AND histone IN ('%s') AND name IN ('%s')", freeze,
                    paste(unique(todocombos$histone_window), collapse="','"), 
