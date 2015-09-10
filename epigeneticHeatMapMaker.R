@@ -90,37 +90,21 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
 
     #### See if combinations of setName-epigeneticFactor-window exist ####
     ## get counts of all sites in samples ##
-    todocombos <- expand.grid(setName=unique(sites$setName), histones=histoneorder, 
+    todocombos <- expand.grid(setName=unique(sites$sampleName), histones=histoneorder, 
                               windows=windows, stringsAsFactors=FALSE)
-    message("before adding histone window")
     todocombos$histone_window <- with(todocombos, 
                                       paste(histones, getWindowLabel(windows),sep="."))
-    stop("make_epi_heatmap")
-    counts <- count(as.data.frame(sites)[,c("setName","BID")], "setName")
-    todocombos <- merge(todocombos, counts)
+
+    #counts <- count(as.data.frame(sites)[,c("sampleName","BID")], "sampleName")
+    #todocombos <- merge(todocombos, counts)
 
     stop("make_epi_heatmap")
 
-    sql <- sprintf("SELECT name, size, histone FROM psl_histones WHERE freeze='%s' AND histone IN ('%s') AND name IN ('%s')", freeze,
-                   paste(unique(todocombos$histone_window), collapse="','"), 
-                   paste(unique(todocombos$setName), collapse="','"))
-    res <- dbGetQuery(dbConn, sql)
-
-    ## get counts of all sites in samples already done and compare with new sites ##
-    if(nrow(res)>0) {    
-        todocombos$todo <- !with(todocombos, paste0(setName,freq,histone_window)) %in%
-            with(res, paste0(name,size,histone))
-    } else {
-        todocombos$todo <- TRUE
-    }
+    todocombos$todo <- TRUE
 
     rows <- todocombos$todo
     todoHistones <- unique(todocombos$histones[rows])
     todoWindows <- unique(todocombos$windows[rows])
-    todoSets <- unique(todocombos$setName[rows])
-
-    #### Do combinations of setName-epigeneticFactor-window for newbies ####
-    sites <- sites[sites$setName %in% todoSets]
 
     if(length(sites)>0) {
         for(f in todoHistones) {
@@ -142,39 +126,6 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
             }
             rm(epigenData)
         }
-        
-        sites <- as.data.frame(sites)
-        
-        ## Load the newbies to the DB ##
-        ## load by histone & sets to conserve bandwidth and memory ##
-        cols <- c(grep(paste(getWindowLabel(windows), collapse="|"), 
-                       names(sites), value=TRUE), 
-                  grep("inout$", names(sites), value=TRUE))   
-        for(f in cols) {
-            message("Loading to DB ", f)
-            for(x in unique(sites$setName)) {
-                toload <- subset(sites, setName==x)[,c("Sequence","type",f)]
-                size <- nrow(toload)
-                
-                ## undo addition of '_' within the histone name due to cleanColname ##
-                if(!grepl("inout$",f)) {
-                    newcol <- histone_clean[[sub("(.+)\\.\\d+.+", "\\1", f)]]
-                    newcol <- paste0(newcol,sub(".+(\\.\\d+.+)", "\\1", f))
-                    if(newcol!=f) {
-                        ## no need to add more column if colname didnt change! ##
-                        toload[,newcol] <- toload[,f]
-                        toload[,f] <- NULL
-                    }                
-                } else {
-                    newcol <- f
-                }
-                toload <- rawToChar(serialize(toload,NULL,ascii = TRUE))
-                sql <- sprintf("REPLACE INTO psl_histones VALUES ('%s',%d,'%s','%s','%s')",
-                               x, size, freeze, newcol, toload)
-                dbSendQuery(dbConn,sql)
-            }
-        }
-        rm(sites)
     }
 
     #### get the data and make the ROC heatmap ####
@@ -224,7 +175,6 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
     sites$good.row <- TRUE
     rset <- with(sites, ROC.setup(good.row, type, Sequence, Alias))
     roc.res <- ROC.strata(cols, rset, add.var=TRUE, sites)
-    #heatmap.dir <- file.path("../../Other/MethHeatMaps",insfile.name)
     heatmap.dir = file.path("../Other/MethHeatMaps", insfile.name)
     system(paste("mkdir", heatmap.dir, sep=" "))
 
@@ -234,22 +184,6 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
               rep(rgb(0,0,220,max=220), 35))
     ROCSVG(roc.res, heatmap.dir, colScale=dcol, overlayCols="white")
 
-    #### save the sites frame ####
-    ## create a summary file of sites + counts to be displayed in the php script, 
-    ## and write the command ran to /Library/WebServer/Documents/Insipid/RhmpFiles/heatMapCMDhistory.txt
-    filename <- paste(heatmap.dir,"/",insfile.name,".sites.frame.RData",sep="")
-    save(sites, file=filename, compress=TRUE)
-
-    summaryFrame <- ddply(sites, .(setName, Alias), summarize,
-                          insertion=length(unique(Sequence)), 
-                          match=length(Sequence))
-
-    cols <- c("setName","insertion","match","Alias")
-    summaryFrame <- summaryFrame[,cols]
-    colnames(summaryFrame) <- c("Setname","Insertions","Matches","Alias")
-    filename <- file.path(heatmap.dir,paste0(insfile.name,"-summary.txt"))
-    summaryFrame <- arrange(summaryFrame, Alias, Setname)
-    write.table(summaryFrame, filename, sep="\t", na="", row.names=FALSE, quote=FALSE)
 
     cmd <- paste0("echo \"insfile.name='",insfile.name,
                   "'; windows <- c('",paste(windows,sep="",collapse="','"),
@@ -261,9 +195,6 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
                   "'); inoutNuc <- '",inoutNuc,"'; freeze <- '",freeze,
                   "';\" | cat - methHeatMapMaker.R | R --no-save --no-restore")
 
-    write("********************************************************",append=TRUE,
-          file="/Library/WebServer/Documents/Insipid/RhmpFiles/heatMapCMDhistory.txt")
 
-    write(cmd, append=TRUE,
-          file="/Library/WebServer/Documents/Insipid/RhmpFiles/heatMapCMDhistory.txt")
+    message(cmd)
 }
