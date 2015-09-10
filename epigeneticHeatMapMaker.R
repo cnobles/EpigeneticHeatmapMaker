@@ -95,11 +95,6 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
     todocombos$histone_window <- with(todocombos, 
                                       paste(histones, getWindowLabel(windows),sep="."))
 
-    #counts <- count(as.data.frame(sites)[,c("sampleName","BID")], "sampleName")
-    #todocombos <- merge(todocombos, counts)
-
-    stop("make_epi_heatmap")
-
     todocombos$todo <- TRUE
 
     rows <- todocombos$todo
@@ -128,73 +123,29 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, conne
         }
     }
 
-    #### get the data and make the ROC heatmap ####
-    message("Acquiring data for Heatmap")
+    sites <- as.data.frame(sites)
 
-    if(tolower(inoutNuc)=="yes" & freeze=="hg18") {
-        sql <- sprintf("SELECT name, histone, counts FROM psl_histones WHERE freeze='%s' AND histone IN ('%s') AND name IN ('%s')", freeze,
-                       paste(c(unique(todocombos$histone_window),
-                               "ActivatedNucleosomes_inout", 
-                               "RestingNucleosomes_inout"), collapse="','"), 
-                       paste(unique(todocombos$setName), collapse="','"))
-    } else {
-        sql <- sprintf("SELECT name, histone, counts FROM psl_histones WHERE freeze='%s' AND histone IN ('%s') AND name IN ('%s')", freeze,
-                       paste(unique(todocombos$histone_window), collapse="','"), 
-                       paste(unique(todocombos$setName), collapse="','"))    
+    # not DRY: the same code is used in genomic heatmap
+    get_annotation_columns <- function(sites) {
+      granges_column_names <- c("seqnames", "start", "end", "width", "strand")
+      int_site_column_names <- c("siteID", "sampleName", "chr", "strand", "position")
+      required_columns <- unique(c(
+        granges_column_names, int_site_column_names, "type"))
+      stopifnot(all(required_columns %in% names(sites)))
+      setdiff(names(sites), required_columns)
     }
-    sites <- dbGetQuery(dbConn, sql)
-
-    ## do unserialization ##
-    sites <- split(sites, sites$name)
-    sites <- lapply(names(sites), function(x) 
-        cbind(setName=x,
-              do.call(cbind, lapply(sites[[x]]$counts, 
-                              function(y) unserialize(charToRaw(y))))))
-    sites <- rbind.fill(sites)
-
-    ## make sure total sites obtained from DB is same as onces retreived earlier ##
-    counts <- arrange(counts, setName)
-    counts2 <- arrange(count(sites,"setName"),setName)
-    stopifnot(identical(counts$freq, counts2$freq))
-
-    sites <- merge(sites, setsConAlias, all.x = TRUE)
-    stopifnot(!any(is.na(sites$Alias)))
-    sites <- arrange(sites, Alias, Sequence, type)
 
     message("Make Heatmap")
-    ## order columns by histone order ##
-    cols <- grep(paste(getWindowLabel(windows), collapse="|"), names(sites), 
-                 value=TRUE)
-    bore <- sapply(strsplit(cols,"\\."),"[[",1)
-    rows <- match(histoneorder, bore)
-    cols <- cols[rows]
-    if(tolower(inoutNuc)=="yes" & freeze=="hg18") {
-        cols <- c(cols, grep("inout$", names(sites), value=TRUE))
-    }
-
-    sites$good.row <- TRUE
-    rset <- with(sites, ROC.setup(good.row, type, Sequence, Alias))
-    roc.res <- ROC.strata(cols, rset, add.var=TRUE, sites)
-    heatmap.dir = file.path("../Other/MethHeatMaps", insfile.name)
-    system(paste("mkdir", heatmap.dir, sep=" "))
+    
+    annotation_columns <- get_annotation_columns(sites)
+    
+    rset <- with(sites, ROC.setup(
+      rep(TRUE, nrow(sites)), type, siteID, sampleName))
+    roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites)
 
     dcol <- c(rep(rgb(185,185,0,max=185), 70), 
               rgb(185:0,185:0,0,max=185),
               rgb(0,0,0:220,max=220), 
               rep(rgb(0,0,220,max=220), 35))
-    ROCSVG(roc.res, heatmap.dir, colScale=dcol, overlayCols="white")
-
-
-    cmd <- paste0("echo \"insfile.name='",insfile.name,
-                  "'; windows <- c('",paste(windows,sep="",collapse="','"),
-                  "'); setName <- c('",paste(setName,sep="",collapse="','"),
-                  "'); Alias <- c('",paste(Alias,sep="",collapse="','"),
-                  "'); meth.sets <- c('",paste(meth.sets,sep="",collapse="','"),
-                  "'); act.sets <- c('",paste(act.sets,sep="",collapse="','"),
-                  "'); tf.sets <- c('",paste(tf.sets,sep="",collapse="','"),
-                  "'); inoutNuc <- '",inoutNuc,"'; freeze <- '",freeze,
-                  "';\" | cat - methHeatMapMaker.R | R --no-save --no-restore")
-
-
-    message(cmd)
+    ROCSVG(roc.res, output_dir, colScale=dcol, overlayCols="white")
 }
