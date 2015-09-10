@@ -1,12 +1,4 @@
-source("epigeneticHeatMapMaker.R")
-
 library(argparse, quietly=TRUE)
-library(DBI, quietly=TRUE)
-library(RMySQL, quietly=TRUE)
-library(dplyr)
-
-library(BSgenome)
-library(intSiteRetriever)
 
 parser <- ArgumentParser(description="Make epigenetic heatmap for sites from database")
 parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
@@ -20,6 +12,15 @@ parser$add_argument("-a", "--annotation_path", type="character", default="/media
     help="epigenetic annotation path with RData files, e.g. H2BK120ac, H3K4ac, NRSF")
 
 args <- parser$parse_args()
+
+source("epigeneticHeatMapMaker.R")
+
+library(DBI, quietly=TRUE)
+library(RMySQL, quietly=TRUE)
+library(dplyr)
+
+library(BSgenome)
+library(intSiteRetriever)
 
 referenceGenome <- args$ref_genome
 heat_map_result_dir <- args$output_dir 
