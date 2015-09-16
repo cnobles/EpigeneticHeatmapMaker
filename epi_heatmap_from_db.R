@@ -5,11 +5,11 @@ parser$add_argument("sample_gtsp", nargs='?', default='sampleName_GTSP.csv')
 parser$add_argument("-o", "--output_dir", type="character", default="heatmap_output",
     help="output folder where genomic heat maps files will be saved")
 parser$add_argument("-r", "--ref_genome", type="character", default="hg18", 
-    help="reference genome used for all samples(only hg18 supported at present)")
+    help="reference genome used for all samples(only hg18 and mm8 are supported at present)")
 parser$add_argument("-s", "--sites_group", type="character", default="intsites_miseq", 
     help="which group to use for connection")
-parser$add_argument("-a", "--annotation_path", type="character", default="/media/THING1/dryga/Epigenetic/hg18", 
-    help="epigenetic annotation path with RData files, e.g. H2BK120ac, H3K4ac, NRSF")
+parser$add_argument("-a", "--annotation_path", type="character", default="/media/THING1/dryga/Epigenetic", 
+    help="Should have folders hg18 and mm8 with epigenetic annotation. Each folder has RData files, e.g. H2BK120ac, NRSF.")
 
 args <- parser$parse_args()
 
@@ -22,9 +22,17 @@ library(dplyr)
 library(BSgenome)
 library(intSiteRetriever)
 
+available_epigenetic_ref_genomes <- c ("hg18", "mm8")
+
 referenceGenome <- args$ref_genome
+if ( ! referenceGenome %in% available_epigenetic_ref_genomes) {
+    message("Epigenetic annotation only available for:")
+    message(paste(available_epigenetic_ref_genomes, collapse=" "))
+    stop(0)
+}
 heat_map_result_dir <- args$output_dir 
 annotation <- args$annotation_path
+annotation <- file.path(annotation, referenceGenome)
 
 csvfile <- args$sample_gtsp
 if( ! file.exists(csvfile) ) stop(csvfile, "not found")
