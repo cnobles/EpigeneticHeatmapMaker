@@ -21,6 +21,8 @@ library(dplyr)
 
 library(BSgenome)
 library(intSiteRetriever)
+library(devtools)
+source_url('https://raw.githubusercontent.com/BushmanLab/genomicHeatmapMaker/master/utils.R')
 
 available_epigenetic_ref_genomes <- c ("hg18", "mm8")
 
