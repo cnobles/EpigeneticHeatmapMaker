@@ -10,7 +10,7 @@ parser$add_argument("-s", "--sites_group", type="character", default="intsites_m
     help="which group to use for connection")
 parser$add_argument("-c", "--cell_types", type="character", 
     help="file with cell types to use: each cell type on separate line(epi_cell_types.R prints all avalable types)")
-parser$add_argument("-a", "--annotation_path", type="character", default="/media/THING1/dryga/Epigenetic", 
+parser$add_argument("-a", "--annotation_path", type="character", default="/media/THING1/local/Epigenetic", 
     help="Should have folders hg18 and mm8 with epigenetic annotation. Each folder has RData files, e.g. H2BK120ac, NRSF.")
 
 args <- parser$parse_args()
