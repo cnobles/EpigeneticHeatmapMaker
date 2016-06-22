@@ -52,10 +52,6 @@ stopifnot(all(c("sampleName", "GTSP") %in% colnames(sampleName_GTSP)))
 message("\nGenerating report from the following sets")
 print(sampleName_GTSP)
 
-### connection <- dbConnect(MySQL(), group=args$sites_group)
-### info <- dbGetInfo(connection)
-### connection <- src_sql("mysql", connection, info = info)
-
 if (config$UseMySQL){
    stopifnot(file.exists("~/.my.cnf"))
    stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))

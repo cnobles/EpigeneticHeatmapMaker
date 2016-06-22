@@ -1,5 +1,6 @@
 libs <- c("survival", "pipeUtils", "colorspace", "hiAnnotator", 
           "plyr", "reshape2")
+
 loaded <- sapply(libs, library, character.only=TRUE, quietly=TRUE)
 
 make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, 
