@@ -14,14 +14,19 @@ parser$add_argument("-t", "--cell_types", type="character",
 
 args <- parser$parse_args()
 
+codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
+
 library('yaml')
 
 # Load configuration file
 if (!file.exists(args$c)) stop("the configuration file can not be found.")
 config <<- yaml.load_file(args$c)
 
-source("epigeneticFeatures.R")
-source("epigeneticHeatMapMaker.R")
+### source("epigeneticFeatures.R")
+### source("epigeneticHeatMapMaker.R")
+
+source(file.path(codeDir, "epigeneticFeatures.R"))
+source(file.path(codeDir, "epigeneticHeatMapMaker.R"))
 
 library(DBI, quietly=TRUE)
 library(RMySQL, quietly=TRUE)
@@ -52,20 +57,22 @@ stopifnot(all(c("sampleName", "GTSP") %in% colnames(sampleName_GTSP)))
 message("\nGenerating report from the following sets")
 print(sampleName_GTSP)
 
-if (config$UseMySQL){
+# Connect to my database
+if (config$dataBase == 'mysql'){
    stopifnot(file.exists("~/.my.cnf"))
    stopifnot(file.info("~/.my.cnf")$mode == as.octmode("600"))
-   dbConn <- dbConnect(MySQL(), group=config$MySQLconnectionGroup)
+   dbConn <- dbConnect(MySQL(), group=config$mysqlConnectionGroup)
    info <- dbGetInfo(dbConn)
    connection <- src_sql("mysql", dbConn, info = info)
-}else{
-   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteIntSiteCallerDB)
+}else if (config$dataBase == 'sqlite') {
+   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteIntSitesDB)
    info <- dbGetInfo(dbConn)
    connection <- src_sql("sqlite", dbConn, info = info)
-   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteSpecimenManagementDB)
+   dbConn2 <- dbConnect(RSQLite::SQLite(), dbname=config$sqliteSampleManagement)
    info2 <- dbGetInfo(dbConn2)
    connection2 <- src_sql("sqlite", dbConn2, info = info2)
-}
+} else { stop('Can not establish a connection to the database') }
+
 
 histoneorder_for_heatmap <- epigenetic_features()
 if ( ! is.null(args$cell_types)) {
