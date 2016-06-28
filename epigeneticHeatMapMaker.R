@@ -1,5 +1,6 @@
 libs <- c("survival", "pipeUtils", "colorspace", "hiAnnotator", 
           "plyr", "reshape2")
+
 loaded <- sapply(libs, library, character.only=TRUE, quietly=TRUE)
 
 make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir, 
@@ -59,5 +60,6 @@ sites_to_epigenetic_heatmap <- function(sites, referenceGenome, output_dir, anno
               rgb(185:0,185:0,0,max=185),
               rgb(0,0,0:220,max=220), 
               rep(rgb(0,0,220,max=220), 35))
-    ROCSVG(roc.res, output_dir, colScale=dcol, overlayCols="white")
+    # ROCSVG(roc.res, output_dir, colScale=dcol, overlayCols="white")
+    ROCSVG(roc.res, output_dir)
 }
