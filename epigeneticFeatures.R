@@ -1,3 +1,19 @@
+#    This source code file is a component of the larger INSPIIRED genomic analysis software package.
+#    Copyright (C) 2016 Frederic Bushman
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 epigenetic_features <- function() {
     # datasets
     meth.sets <- c('H2BK5me1','H3R2me1','H3R2me2','H3K4me1','H3K4me2','H3K4me3','H3K9me1','H3K9me2','H3K9me3','H3K27me1','H3K27me2','H3K27me3','H3K36me1','H3K36me3','H3K79me1','H3K79me2','H3K79me3','H4R3me2','H4K20me1','H4K20me3','PolII','H2AZ','CTCF','H3K4me1-HeLaS3_Untr','H3K4me1-HeLaS3_INFS','H3K4me3-HeLaS3_Untr','H3K4me3-HeLaS3_INFS','H3K27me3-CD133','H3K4me1-CD133','H3K9me1-CD133','H4K20me1-CD133','H3K27me1-CD133','H3K36me3-CD133','H3K4me3-CD133','H3K9me3-CD133','PolII-CD133','H2AZ-CD133','H3K9me2-HeLa','H3K9me3-HeLa','H3K27me3-HeLa','H3K36me3-HeLa','H4K20me3-HeLa','CTCF-HeLa','H4K20me1-HeLa','H2BK5me1-HeLa','H3K4me1-HeLa','H2AZ_hsalt-HeLa','H2AZ_lsalt-HeLa','H3K4me3-HeLa')
