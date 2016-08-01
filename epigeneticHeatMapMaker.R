@@ -14,7 +14,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-libs <- c("survival", "pipeUtils", "colorspace", "hiAnnotator", 
+libs <- c("survival", "hotROCs", "colorspace", "hiAnnotator", 
           "plyr", "reshape2")
 
 loaded <- sapply(libs, library, character.only=TRUE, quietly=TRUE)
@@ -63,19 +63,12 @@ sites_to_epigenetic_heatmap <- function(sites, referenceGenome, output_dir, anno
         }
     }
 
-    sites <- as.data.frame(sites)
-
-    message("Make Heatmap")
-    annotation_columns <- get_annotation_columns(sites)
-    
-    rset <- with(sites, ROC.setup(
-      rep(TRUE, nrow(sites)), type, siteID, sampleName))
-    roc.res <- ROC.strata(annotation_columns, rset, add.var=TRUE, sites)
-
-    dcol <- c(rep(rgb(185,185,0,max=185), 70), 
-              rgb(185:0,185:0,0,max=185),
-              rgb(0,0,0:220,max=220), 
-              rep(rgb(0,0,220,max=220), 35))
-    # ROCSVG(roc.res, output_dir, colScale=dcol, overlayCols="white")
-    ROCSVG(roc.res, output_dir)
+    if (config$rocControls == 'unmatched')
+    {
+      sites_to_ROC_ordinary(sites, output_dir)
+    } else if (config$rocControls == 'matched') {
+      sites_to_ROC_matched(sites, output_dir)
+    } else {
+      stop('Error, rocControls is not properly defined in the configuration file.')
+    }
 }

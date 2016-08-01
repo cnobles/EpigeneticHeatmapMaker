@@ -38,9 +38,6 @@ library('yaml')
 if (!file.exists(args$c)) stop("the configuration file can not be found.")
 config <<- yaml.load_file(args$c)
 
-### source("epigeneticFeatures.R")
-### source("epigeneticHeatMapMaker.R")
-
 source(file.path(codeDir, "epigeneticFeatures.R"))
 source(file.path(codeDir, "epigeneticHeatMapMaker.R"))
 
@@ -51,7 +48,9 @@ library(dplyr)
 library(BSgenome)
 library(intSiteRetriever)
 library(devtools)
-source_url('https://raw.githubusercontent.com/BushmanLab/genomicHeatmapMaker/master/utils.R')
+
+#source_url('https://raw.githubusercontent.com/BushmanLab/genomicHeatmapMaker/master/utils.R')
+source(file.path(codeDir, "utils.R"))
 
 available_epigenetic_ref_genomes <- c ("hg18", "mm8")
 
