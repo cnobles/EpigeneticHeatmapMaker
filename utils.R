@@ -124,7 +124,7 @@ get_integration_sites_with_mrcs_from_data <- function(
   
   # check that all samples processed with the same reference genome
   ref_genome <- unique(sites$refGenome)
-  if ( length(ref_genome) != 1) {
+  if ( length(ref_genome) != 1 ) {
     print("Sites processed on multiple genomes or no genome info in data.")
     print(unique(sites$refGenome))
     stop()
@@ -144,10 +144,11 @@ get_integration_sites_with_mrcs_from_data <- function(
   
   mrcs <- get_N_MRCs(
     sites_meta, get_reference_genome(ref_genome), number_mrcs_per_site = 3)
-  mrcs <- merge(mrcs, select(sites, siteID, sampleName, refGenome))
+  mrcs <- merge(mrcs, select(sites, siteID, sampleName))
   mrcs$type <- "match"
-  mrcs <- add_label(mrcs, sampleName_GTSP)
+  #mrcs <- add_label(mrcs, sampleName_GTSP)
   
+  sites$gender <- NULL
   sites_mrcs <- rbind(sites, mrcs)
   
   sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
@@ -161,6 +162,7 @@ get_integration_sites_with_mrcs_from_data <- function(
   
   sites_mrcs
 }
+
 
 get_annotation_columns <- function(sites) {
   granges_column_names <- c("seqnames", "start", "end", "width", "strand")
