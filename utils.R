@@ -67,6 +67,23 @@ get_sites_controls_from_db <- function(sampleName_GTSP, referenceGenome, connect
     get_integration_sites_with_mrcs(sampleName_GTSP, reference_genome_sequence, connection)
 }
 
+#' incorporate supplied data in the correct format
+get_sites_controls_from_data <- function(sampleName_GTSP, referenceGenome, sample_data) {
+  if ( ! "label" %in% colnames(sampleName_GTSP)) {
+    sampleName_GTSP$label <- sampleName_GTSP$GTSP
+  }
+  sampleName_GTSP <- select(sampleName_GTSP, sampleName, GTSP, label)
+  
+  # should have at least two samples
+  stopifnot(length(unique(sampleName_GTSP$GTSP)) != 1)
+  
+  sampleName_GTSP$refGenome <- rep(referenceGenome, nrow(sampleName_GTSP))
+  
+  reference_genome_sequence <- get_reference_genome(referenceGenome)
+  get_integration_sites_with_mrcs_from_data(
+    sampleName_GTSP, reference_genome_sequence, sample_data)
+}
+
 add_label <- function(sites, sampleName_GTSP) {
     sites_GTSP <- merge(sites, sampleName_GTSP)
     sites_GTSP$sampleName <- sites_GTSP$label
@@ -99,6 +116,50 @@ get_integration_sites_with_mrcs <- function(
     seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
 
     sites_mrcs
+}
+
+get_integration_sites_with_mrcs_from_data <- function(
+  sampleName_GTSP, refGenomeSeq, sample_data){
+  sites <- read.csv(sample_data, stringsAsFactors = FALSE)
+  
+  # check that all samples processed with the same reference genome
+  ref_genome <- unique(sites$refGenome)
+  if ( length(ref_genome) != 1) {
+    print("Sites processed on multiple genomes or no genome info in data.")
+    print(unique(sites$refGenome))
+    stop()
+  }
+  
+  sites$siteID <- 1:nrow(sites)
+  sites$type <- "insertion"
+  sites <- add_label(sites, sampleName_GTSP)
+  
+  # all samples should have sites
+  # also we need at least several sites per sample/replicate
+  stopifnot(all(table(sites$sampleName) > 3))
+  
+  #mrcs <- getMRCs(sampleName_GTSP, connection)
+  sites_meta <- select(sites, siteID, gender) %>%
+    mutate(gender = tolower(gender))
+  
+  mrcs <- get_N_MRCs(
+    sites_meta, get_reference_genome(ref_genome), number_mrcs_per_site = 3)
+  mrcs <- merge(mrcs, select(sites, siteID, sampleName, refGenome))
+  mrcs$type <- "match"
+  mrcs <- add_label(mrcs, sampleName_GTSP)
+  
+  sites_mrcs <- rbind(sites, mrcs)
+  
+  sites_mrcs <- makeGRanges(sites_mrcs, soloStart=TRUE,
+                            chromCol='chr', strandCol='strand', startCol='position')
+  
+  #seqinfo needs to be exact here or trimming will be wrong
+  newSeqInfo <- seqinfo(refGenomeSeq)
+  seqInfo.new2old <- match(seqnames(newSeqInfo),
+                           seqnames(seqinfo(sites_mrcs)))
+  seqinfo(sites_mrcs, new2old=seqInfo.new2old) <- newSeqInfo
+  
+  sites_mrcs
 }
 
 get_annotation_columns <- function(sites) {

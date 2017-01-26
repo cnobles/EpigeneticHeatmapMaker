@@ -26,6 +26,13 @@ make_epi_heatmap <- function(sampleName_GTSP, referenceGenome, output_dir,
     sites_to_epigenetic_heatmap(sites, referenceGenome, output_dir, annotPath, histoneorder)
 }
 
+make_epi_heatmap_from_data <- function(sampleName_GTSP, referenceGenome, output_dir, 
+                             sample_data, annotPath, histoneorder
+) {
+  sites <- get_sites_controls_from_data(sampleName_GTSP, referenceGenome, sample_data)
+  sites_to_epigenetic_heatmap(sites, referenceGenome, output_dir, annotPath, histoneorder)
+}
+
 sites_to_epigenetic_heatmap <- function(sites, referenceGenome, output_dir, annotPath, histoneorder) {
     #### set parameters for annotations & analysis ####
     if( ! file.exists(annotPath)) {
